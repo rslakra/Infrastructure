@@ -1,8 +1,8 @@
-# Infrastructure
+# Docker
 
 ---
 
-The ```Infrastructure``` services.
+The ```Docker``` commands and services.
 
 ## Folder Structure/Conventions
 
@@ -11,10 +11,15 @@ The ```Infrastructure``` services.
 ```
     /
     ├── <module>                    # The module service
+    ├── Apache HTTP Server          # The Apache HTTP Server
+    ├── Docker Registry             # The Sample WebApp Application    
+    ├── Jenkins                     # The Jenkins
     ├── README.md                   # Instructions and helpful links
     ├── robots.txt                  # tells which URLs the search engine crawlers can access on your site
     └── <module>                    # The module service
 ```
+
+
 
 ## Docker Commands
 
@@ -49,28 +54,24 @@ docker stop <docker-container-name>
 docker container rm <docker-container-name>
 ```
 
-
-
-## PORT Usage Commands
-
-### Find Used Port
+To force remove an image even if it's being used by a container, you can use the ```-f``` flag:
 ```shell
-sudo lsof -i :8080
-sudo lsof -i -P | grep 8080
+docker rmi -f <image_name_or_id>
 ```
 
-The ```-i``` restricts ```lsof``` to show IP connections (as opposed to all the other things it can show).
-```-P``` turns off port name conversion so that it shows port numbers rather than service names, which is easier when you know the port number you're after.
 
-### Print Process ID
+## Clean up unused images
+
+### To remove all dangling (untagged) images
 ```shell
-sudo lsof -i -P | grep 8080 | awk '{ print $2 }'
+docker image prune
 ```
 
-### Kill Process by ID
+### To remove all unused images (both dangling and tagged)
 ```shell
-sudo kill -9 6235
+docker image prune -a
 ```
+
 
 
 
@@ -78,9 +79,9 @@ sudo kill -9 6235
 
 ---
 
-- [Docker](./Docker/README.md)
-
-
+- [Apache HTTP Server](./Apache%20HTTP%20Server/README.md)
+- [Jenkins](./Jenkins/README.md)
+- [WebApp Docker Example](../../Technology/WebApp/README.md#docker-commands)
 
 # Author
 
@@ -88,19 +89,3 @@ sudo kill -9 6235
 
 - Rohtash Lakra
 
-
-## Contribution Guidelines
-
----
-
-* Writing tests
-* Code review
-* Other Guidelines
-
-## Version
-
----
-
-```text
-MAJOR.MINOR.PATCH.BUILD
-```
