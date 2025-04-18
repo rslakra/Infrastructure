@@ -1,6 +1,5 @@
-# Infrastructure
-
----
+Infrastructure
+===
 
 The ```Infrastructure``` services.
 
@@ -10,10 +9,12 @@ The ```Infrastructure``` services.
 
 ```
     /
-    ├── <module>                    # The module service
-    ├── README.md                   # Instructions and helpful links
-    ├── robots.txt                  # tells which URLs the search engine crawlers can access on your site
-    └── <module>                    # The module service
+    ├── Docekr                          # The Library Service
+    ├── Kubernetes (K8S)                # The Library Service
+    ├── .gitignore
+    ├── README.md                       # Instructions and helpful links
+    ├── robots.txt                      # tells which URLs the search engine crawlers can access on your site
+    └── <module>                        # The module service
 ```
 
 ## Docker Commands
