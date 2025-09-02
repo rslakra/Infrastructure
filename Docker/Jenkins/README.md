@@ -15,15 +15,16 @@ This is a fully functional Jenkins server, based on the weekly and LTS releases 
 ---
 
 ```
-    /
-    ├── <module/sub-module>         # The module/sub-module service
-    ├── Jenkins                     # The Jenkins Application    
-    |    ├── conf                   # configuration module
-    |    ├── iac                    # IaC module
-    |    ├── .dockerignore          # docker ignore files
-    |    └── README.md              # Jenkins Instructions and helpful links
-    ├── README.md                   # Instructions and helpful links
-    └── <module>                    # The module service
+/
+├── <module/sub-module>             # The module/sub-module service
+├── Jenkins                         # The Jenkins Application    
+│    ├── conf                       # configuration module
+│    ├── iac                        # IaC module
+│    ├── .dockerignore              # docker ignore files
+│    └── README.md                  # Jenkins Instructions and helpful links
+├── README.md                       # Instructions and helpful links
+├── <module>                        # The module service
+└── /
 ```
 
 

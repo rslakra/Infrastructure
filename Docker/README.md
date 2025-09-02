@@ -9,14 +9,15 @@ The ```Docker``` commands and services.
 ---
 
 ```
-    /
-    ├── <module>                    # The module service
-    ├── Apache HTTP Server          # The Apache HTTP Server
-    ├── Docker Registry             # The Sample WebApp Application    
-    ├── Jenkins                     # The Jenkins
-    ├── README.md                   # Instructions and helpful links
-    ├── robots.txt                  # tells which URLs the search engine crawlers can access on your site
-    └── <module>                    # The module service
+/
+├── <module>                        # The module service
+├── Apache HTTP Server              # The Apache HTTP Server
+├── Docker Registry                 # The Sample WebApp Application    
+├── Jenkins                         # The Jenkins
+├── README.md                       # Instructions and helpful links
+├── robots.txt                      # tells which URLs the search engine crawlers can access on your site
+├── <module>                        # The module service
+└── /
 ```
 
 

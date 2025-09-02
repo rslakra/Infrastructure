@@ -19,20 +19,23 @@ and ```docker pull```.
 ---
 
 ```
-    /
-    ├── <module>                    # The module service
-    ├── Docker Registry             # The Sample WebApp Application    
-    |    ├── conf                   # configuration module
-    |    ├── iac                    # IaC module
-    |    ├── webapp                 # webapp files
-    |    |    ├── css               # CSS files
-    |    |    ├── images            # image files
-    |    |    ├── js                # JS files
-    |    |    └── index.html        # index.html file
-    |    ├── .dockerignore          # docker ignore files
-    |    └── README.md              # Instructions and helpful links
-    ├── README.md                   # Instructions and helpful links
-    └── <module>                    # The module service
+/
+├── <module>                        # The module service
+├── Docker Registry                 # The Sample WebApp Application    
+│    ├── conf                       # configuration module
+│    ├── iac                        # IaC module
+│    ├── webapp                     # webapp files
+│    │    ├── css                   # CSS files
+│    │    ├── images                # image files
+│    │    ├── js                    # JS files
+│    │    └── index.html            # index.html file
+│    ├── .dockerignore              # docker ignore files
+│    ├── README.md                  # Instructions and helpful links
+│    └── /
+├── README.md                       # Instructions and helpful links
+├── robots.txt                      # tells which URLs the search engine crawlers can access on your site
+├── <module>                        # The module service
+└── /
 ```
 
 

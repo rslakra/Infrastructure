@@ -11,10 +11,14 @@ The ```Apache HTTP Server``` is the sample web application running under ```http
 ---
 
 ```
-    /
-    ├── <module/sub-module>         # The module/sub-module service
-    ├── README.md                   # Instructions and helpful links
-    └── <module>                    # The module service
+/
+├── <module/sub-module>             # The module/sub-module service
+│    ├── README.md                  # Instructions and helpful links
+│    └── /
+├── README.md                       # Instructions and helpful links
+├── robots.txt                      # tells which URLs the search engine crawlers can access on your site
+├── <module>                        # The module service
+└── /
 ```
 
 
