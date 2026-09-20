@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cortex</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Cortex</h1>
+        
+        <div class="upload-section">
+            <h2>Upload Documents</h2>
+            <form id="upload-form">
+                <input type="file" id="file-input" accept=".txt,.pdf" multiple>
+                <button type="submit">Upload</button>
+            </form>
+        </div>
+
+        <div class="query-section">
+            <h2>Ask Questions</h2>
+            <textarea id="question-input" placeholder="Enter your question..."></textarea>
+            <button id="submit-question">Ask</button>
+        </div>
+
+        <div class="response-section">
+            <h2>Response</h2>
+            <div id="response-content"></div>
+        </div>
+    </div>
+
+    <script>
+        function formatError(result) {
+            const detail = result.detail;
+            if (typeof detail === 'string') {
+                return detail;
+            }
+            if (Array.isArray(detail)) {
+                return detail.map((item) => item.msg).join(', ');
+            }
+            return result.message || result.error || 'Request failed';
+        }
+
+        document.getElementById('upload-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const files = document.getElementById('file-input').files;
+
+            if (!files.length) {
+                alert('Please select at least one .txt or .pdf file');
+                return;
+            }
+
+            for (const file of files) {
+                const formData = new FormData();
+                formData.append('file', file);
+
+                try {
+                    const response = await fetch('/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const result = await response.json();
+
+                    if (!response.ok) {
+                        alert(`${file.name}: ${formatError(result)}`);
+                        return;
+                    }
+
+                    alert(result.message || `${file.name} uploaded successfully`);
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert(`Error uploading ${file.name}`);
+                    return;
+                }
+            }
+        });
+
+        document.getElementById('submit-question').addEventListener('click', async () => {
+            const question = document.getElementById('question-input').value.trim();
+
+            if (!question) {
+                alert('Please enter a question');
+                return;
+            }
+
+            try {
+                const response = await fetch('/query', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ question })
+                });
+                const result = await response.json();
+
+                if (!response.ok) {
+                    document.getElementById('response-content').textContent = formatError(result);
+                    return;
+                }
+
+                document.getElementById('response-content').textContent = result.response || '';
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error getting response');
+            }
+        });
+    </script>
+</body>
+</html>

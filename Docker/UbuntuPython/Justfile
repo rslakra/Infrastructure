@@ -1,0 +1,67 @@
+default:
+    just --list --unsorted
+
+###########################################################
+# Docker Commands (Local Ubuntu Python Container)
+###########################################################
+
+# Docker configuration variables
+IMAGE_NAME := "ubuntu-python"
+IMAGE_TAG := "latest"
+CONTAINER_NAME := "ubuntu-python"
+
+# build the ubuntu python image
+build-image:
+    docker build -t {{IMAGE_NAME}}:{{IMAGE_TAG}} .
+
+# run the ubuntu python container
+run-container:
+    docker run -d --name {{CONTAINER_NAME}} -p 8000:8000 {{IMAGE_NAME}}:{{IMAGE_TAG}}
+
+# access shell in the running container
+bash-container:
+    docker exec -it {{CONTAINER_NAME}} /bin/bash
+
+# view logs of the container
+logs-container:
+    docker logs -f {{CONTAINER_NAME}}
+
+# stop the container
+stop-container:
+    docker stop {{CONTAINER_NAME}}
+    docker rm {{CONTAINER_NAME}}
+
+# restart workflow: stop, build, and run
+restart-container: stop-container build-image run-container
+    @echo "✅ Container restarted successfully"
+
+# check container status
+check-status:
+    @echo "Container status:"
+    docker ps -a --filter name={{CONTAINER_NAME}}
+
+# check python and pip versions in the container
+check-python:
+    @echo "Python version:"
+    docker exec {{CONTAINER_NAME}} python --version
+    @echo "\nPip version:"
+    docker exec {{CONTAINER_NAME}} pip --version
+
+# test the FastAPI app
+test-app:
+    @echo "Testing FastAPI app..."
+    @echo "\nRoot endpoint:"
+    curl -s http://localhost:8000/ | python3 -m json.tool
+    @echo "\nHealth check:"
+    curl -s http://localhost:8000/health | python3 -m json.tool
+    @echo "\n✅ FastAPI app is running! Visit http://localhost:8000/docs for interactive API docs"
+
+# remove the docker image
+clean-image:
+    docker rmi {{IMAGE_NAME}}:{{IMAGE_TAG}}
+    @echo "✅ Image {{IMAGE_NAME}}:{{IMAGE_TAG}} removed"
+
+# full cleanup: stop container and remove image
+clean-all: stop-container clean-image
+    @echo "✅ Full cleanup completed"
+

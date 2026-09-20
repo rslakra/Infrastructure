@@ -1,0 +1,21 @@
+# Alternative Solution: Ingress Configuration
+# This provides a more production-like setup with domain-based routing
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: webapp-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+  - host: k8s.webapp.local  # You can change this to your preferred domain
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: webapp-service
+            port:
+              number: 3000

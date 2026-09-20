@@ -1,0 +1,10 @@
+venv/
+.env
+__pycache__/
+*.py[cod]
+cortex_db/
+.git/
+.github/
+*.md
+Makefile
+.env.example

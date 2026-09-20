@@ -1,0 +1,116 @@
+name: CI/CD
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'README.md'
+      - '.env.example'
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  CONTAINER_NAME: cortex
+  APP_PORT: 8080
+  IMAGE_TAG: latest
+
+jobs:
+  integration:
+    name: Continuous Integration
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Lint code
+        run: make lint
+
+      - name: Run tests
+        run: python -m compileall app.py routes.py webapp core
+
+  build-and-push-ecr-image:
+    name: Continuous Delivery
+    needs: integration
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY_NAME }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+
+  continuous-deployment:
+    name: Continuous Deployment
+    needs: build-and-push-ecr-image
+    runs-on: self-hosted
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Pull latest image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY_NAME }}
+        run: docker pull $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+      - name: Stop and remove container if running
+        run: docker rm -f $CONTAINER_NAME 2>/dev/null || true
+
+      - name: Run container
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY_NAME }}
+        run: |
+          docker run -d \
+            -p $APP_PORT:8080 \
+            --name $CONTAINER_NAME \
+            --restart unless-stopped \
+            -e OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} \
+            -e AWS_ACCESS_KEY=${{ secrets.AWS_ACCESS_KEY }} \
+            -e AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }} \
+            -e AWS_BUCKET_NAME=${{ secrets.AWS_BUCKET_NAME }} \
+            -e VECTOR_DB_PATH=cortex_db \
+            $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+      - name: Clean previous images and containers
+        run: docker system prune -f

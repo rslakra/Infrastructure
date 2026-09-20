@@ -1,16 +1,23 @@
-Infrastructure
-===
+# Infrastructure
 
 The ```Infrastructure``` services.
+Hands-on infrastructure and deployment projects. Each subdirectory is a self-contained demo with its own README, tooling, and (where applicable) git repository.
 
-## Folder Structure/Conventions
+## Directory Layout/Conventions
 
 ---
 
 ```
 /
-├── Docekr                          # The Library Service
-├── Kubernetes (K8S)                # The Library Service
+├── AWS/
+│   ├── CICD-Demo/
+│   └── RAG-Based-Cortex/
+├── Docekr                          # The Docker Services
+│   └── UbuntuPython/
+├── Kubernetes (K8S)                # The Kubernetes (K8S) Services
+│   └── k8s-demo/
+├── GCP/
+└── Monitoring/
 ├── .gitignore
 ├── README.md                       # Instructions and helpful links
 ├── robots.txt                      # tells which URLs the search engine crawlers can access on your site

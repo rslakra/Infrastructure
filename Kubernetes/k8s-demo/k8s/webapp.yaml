@@ -1,0 +1,57 @@
+# Deployment Section
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webapp-deployment
+  labels:
+    app: webapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: webapp
+  template:
+    metadata:
+      labels:
+        app: webapp
+    spec:
+      containers:
+        - name: webapp
+          image: nanajanashia/k8s-demo-app:v1.0
+          ports:
+            - containerPort: 3000
+          env:
+            - name: USER_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: mongo-secret
+                  key: MONGO_USERNAME
+            - name: USER_PWD
+              valueFrom:
+                secretKeyRef:
+                  name: mongo-secret
+                  key: MONGO_PASSWORD
+            - name: DB_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: mongo-config
+                  key: MONGO_URL
+
+
+---
+# Service Section
+apiVersion: v1
+kind: Service
+metadata:
+  name: webapp-service # an arbitrary name for the service
+spec:
+  type: NodePort # the type of the service to be exposed on the node
+  selector:
+    app: webapp # the label of the deployment
+  ports:
+    - protocol: TCP
+      port: 3000 # the port of the service
+      targetPort: 3000 # the port of the container in the deployment where the request is forwarded to
+      nodePort: 30001 # exposes the service on each node's IP address at a static port
+
+
