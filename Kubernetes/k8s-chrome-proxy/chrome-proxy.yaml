@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chrome-proxy
+  namespace: chrome-standalone
+  labels:
+    app: chrome-proxy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: chrome-proxy
+  template:
+    metadata:
+      labels:
+        app: chrome-proxy
+    spec:
+      containers:
+      - name: chrome-proxy
+        image: chrome-standalone-proxy:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+          name: http-proxy
+        - containerPort: 8443
+          name: https-proxy
+        env:
+        - name: PROXY_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: chrome-config
+              key: PROXY_HOST
+        - name: PROXY_HTTP_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: chrome-config
+              key: PROXY_HTTP_PORT
+        - name: PROXY_HTTPS_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: chrome-config
+              key: PROXY_HTTPS_PORT
+        - name: PYTHONUNBUFFERED
+          value: "1"
+        volumeMounts:
+        - name: proxy-certs
+          mountPath: /app/certs
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+        stdin: true
+        tty: true
+      volumes:
+      - name: proxy-certs
+        emptyDir: {}
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chrome-proxy-service
+  namespace: chrome-standalone
+  labels:
+    app: chrome-proxy
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: http-proxy
+  - port: 8443
+    targetPort: 8443
+    protocol: TCP
+    name: https-proxy
+  selector:
+    app: chrome-proxy

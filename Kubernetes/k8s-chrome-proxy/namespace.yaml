@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: chrome-standalone
+  labels:
+    name: chrome-standalone
+    app: chrome-browser

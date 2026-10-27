@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chrome-interactive-with-proxy
+  namespace: chrome-standalone
+  labels:
+    app: chrome-interactive-with-proxy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: chrome-interactive-with-proxy
+  template:
+    metadata:
+      labels:
+        app: chrome-interactive-with-proxy
+    spec:
+      containers:
+      - name: chrome-interactive-with-proxy
+        image: chrome-standalone-interactive:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 9222
+          name: devtools
+        - containerPort: 5900
+          name: vnc
+        env:
+        - name: DISPLAY
+          valueFrom:
+            configMapKeyRef:
+              name: chrome-config
+              key: DISPLAY
+        - name: HTTP_PROXY
+          value: "http://chrome-proxy-service:8080"
+        - name: HTTPS_PROXY
+          value: "http://chrome-proxy-service:8080"
+        - name: DEFAULT_URL
+          valueFrom:
+            configMapKeyRef:
+              name: chrome-config
+              key: DEFAULT_URL
+        - name: START_URL
+          valueFrom:
+            configMapKeyRef:
+              name: chrome-config
+              key: START_URL
+        volumeMounts:
+        - name: downloads
+          mountPath: /home/chromeuser/Downloads
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+        stdin: true
+        tty: true
+        # Override the default command to use proxy
+        command: ["/home/chromeuser/start-chrome-interactive.sh"]
+        args: ["--proxy-server=http://chrome-proxy-service:8080", "https://www.google.com"]
+      volumes:
+      - name: downloads
+        persistentVolumeClaim:
+          claimName: chrome-downloads-pvc
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chrome-interactive-with-proxy-service
+  namespace: chrome-standalone
+  labels:
+    app: chrome-interactive-with-proxy
+spec:
+  type: LoadBalancer  # Use LoadBalancer for external VNC access
+  ports:
+  - port: 9223
+    targetPort: 9222
+    protocol: TCP
+    name: devtools
+  - port: 5901
+    targetPort: 5900
+    protocol: TCP
+    name: vnc
+  selector:
+    app: chrome-interactive-with-proxy

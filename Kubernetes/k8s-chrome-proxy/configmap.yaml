@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: chrome-config
+  namespace: chrome-standalone
+data:
+  # Chrome Configuration
+  DISPLAY_WIDTH: "1366"
+  DISPLAY_HEIGHT: "768"
+  DEFAULT_URL: "https://google.com"
+  START_URL: "https://google.com"
+  DISPLAY: ":99"
+  
+  # Proxy Configuration
+  PROXY_HOST: "0.0.0.0"
+  PROXY_HTTP_PORT: "8080"
+  PROXY_HTTPS_PORT: "8443"
+  
+  # VNC Configuration
+  VNC_PASSWORD: "chrome"
+  VNC_PORT: "5900"
+  
+  # Chrome Flags
+  CHROME_FLAGS: "--no-sandbox --disable-dev-shm-usage --disable-gpu --remote-debugging-address=0.0.0.0 --remote-debugging-port=9222"

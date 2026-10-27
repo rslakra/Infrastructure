@@ -1,0 +1,45 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: chrome-ingress
+  namespace: chrome-standalone
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    # For VNC WebSocket support
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+spec:
+  ingressClassName: nginx  # Adjust based on your ingress controller
+  rules:
+  - host: chrome.local  # Adjust based on your domain
+    http:
+      paths:
+      - path: /chrome-headless
+        pathType: Prefix
+        backend:
+          service:
+            name: chrome-headless-service
+            port:
+              number: 9222
+      - path: /chrome-interactive
+        pathType: Prefix
+        backend:
+          service:
+            name: chrome-interactive-service
+            port:
+              number: 9222
+      - path: /chrome-interactive-proxy
+        pathType: Prefix
+        backend:
+          service:
+            name: chrome-interactive-with-proxy-service
+            port:
+              number: 9223
+      - path: /proxy
+        pathType: Prefix
+        backend:
+          service:
+            name: chrome-proxy-service
+            port:
+              number: 8080

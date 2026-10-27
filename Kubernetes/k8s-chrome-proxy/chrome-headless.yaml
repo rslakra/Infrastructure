@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chrome-headless
+  namespace: chrome-standalone
+  labels:
+    app: chrome-headless
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: chrome-headless
+  template:
+    metadata:
+      labels:
+        app: chrome-headless
+    spec:
+      containers:
+      - name: chrome-headless
+        image: chrome-standalone:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 9222
+          name: devtools
+        env:
+        - name: DISPLAY_WIDTH
+          valueFrom:
+            configMapKeyRef:
+              name: chrome-config
+              key: DISPLAY_WIDTH
+        - name: DISPLAY_HEIGHT
+          valueFrom:
+            configMapKeyRef:
+              name: chrome-config
+              key: DISPLAY_HEIGHT
+        - name: DEFAULT_URL
+          valueFrom:
+            configMapKeyRef:
+              name: chrome-config
+              key: DEFAULT_URL
+        - name: START_URL
+          valueFrom:
+            configMapKeyRef:
+              name: chrome-config
+              key: START_URL
+        volumeMounts:
+        - name: downloads
+          mountPath: /home/chromeuser/Downloads
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+      volumes:
+      - name: downloads
+        persistentVolumeClaim:
+          claimName: chrome-downloads-pvc
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chrome-headless-service
+  namespace: chrome-standalone
+  labels:
+    app: chrome-headless
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9222
+    targetPort: 9222
+    protocol: TCP
+    name: devtools
+  selector:
+    app: chrome-headless
