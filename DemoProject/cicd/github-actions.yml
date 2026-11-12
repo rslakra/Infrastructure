@@ -1,0 +1,259 @@
+# GitHub Actions CI/CD Pipeline for Multi-Region Website
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: your-ecr-repo
+  GCP_PROJECT_ID: your-gcp-project
+  GCR_REPOSITORY: your-gcr-repo
+
+jobs:
+  # Build and Test
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          cd frontend && npm ci
+          cd ../backend && npm ci
+
+      - name: Run linter
+        run: |
+          cd frontend && npm run lint
+          cd ../backend && npm run lint
+
+      - name: Run unit tests
+        run: |
+          cd frontend && npm test -- --coverage
+          cd ../backend && npm test -- --coverage
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./frontend/coverage/lcov.info,./backend/coverage/lcov.info
+
+  # Security Scanning
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: Run npm audit
+        run: |
+          cd frontend && npm audit --audit-level=moderate
+          cd ../backend && npm audit --audit-level=moderate
+
+  # Build Docker Images (AWS)
+  build-aws:
+    name: Build and Push to AWS ECR
+    runs-on: ubuntu-latest
+    needs: [build-and-test, security-scan]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push frontend image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY-frontend:$IMAGE_TAG ./frontend
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY-frontend:$IMAGE_TAG
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY-frontend:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY-frontend:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY-frontend:latest
+
+      - name: Build and push backend image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY-backend:$IMAGE_TAG ./backend
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY-backend:$IMAGE_TAG
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY-backend:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY-backend:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY-backend:latest
+
+  # Build Docker Images (GCP)
+  build-gcp:
+    name: Build and Push to GCP GCR
+    runs-on: ubuntu-latest
+    needs: [build-and-test, security-scan]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for GCR
+        run: gcloud auth configure-docker
+
+      - name: Build and push frontend image
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t gcr.io/$GCP_PROJECT_ID/$GCR_REPOSITORY-frontend:$IMAGE_TAG ./frontend
+          docker push gcr.io/$GCP_PROJECT_ID/$GCR_REPOSITORY-frontend:$IMAGE_TAG
+          docker tag gcr.io/$GCP_PROJECT_ID/$GCR_REPOSITORY-frontend:$IMAGE_TAG gcr.io/$GCP_PROJECT_ID/$GCR_REPOSITORY-frontend:latest
+          docker push gcr.io/$GCP_PROJECT_ID/$GCR_REPOSITORY-frontend:latest
+
+      - name: Build and push backend image
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t gcr.io/$GCP_PROJECT_ID/$GCR_REPOSITORY-backend:$IMAGE_TAG ./backend
+          docker push gcr.io/$GCP_PROJECT_ID/$GCR_REPOSITORY-backend:$IMAGE_TAG
+          docker tag gcr.io/$GCP_PROJECT_ID/$GCR_REPOSITORY-backend:$IMAGE_TAG gcr.io/$GCP_PROJECT_ID/$GCR_REPOSITORY-backend:latest
+          docker push gcr.io/$GCP_PROJECT_ID/$GCR_REPOSITORY-backend:latest
+
+  # Update Kubernetes Manifests
+  update-manifests:
+    name: Update K8s Manifests
+    runs-on: ubuntu-latest
+    needs: [build-aws, build-gcp]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update image tags in manifests
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          # Update frontend deployment
+          sed -i "s|image:.*frontend.*|image: $ECR_REPOSITORY-frontend:$IMAGE_TAG|g" applications/overlays/prod/frontend-deployment.yaml
+          
+          # Update backend deployment
+          sed -i "s|image:.*backend.*|image: $ECR_REPOSITORY-backend:$IMAGE_TAG|g" applications/overlays/prod/backend-deployment.yaml
+
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add applications/overlays/prod/*.yaml
+          git commit -m "Update image tags to ${{ github.sha }}" || exit 0
+          git push
+
+  # Deploy with ArgoCD (via API)
+  deploy-argocd:
+    name: Trigger ArgoCD Sync
+    runs-on: ubuntu-latest
+    needs: [update-manifests]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Sync ArgoCD Application
+        run: |
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.ARGOCD_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            https://argocd.your-domain.com/api/v1/applications/website-app-prod/sync \
+            -d '{"prune": true, "dryRun": false}'
+
+  # Integration Tests
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [deploy-argocd]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Wait for deployment
+        run: |
+          echo "Waiting for deployment to be ready..."
+          sleep 60
+
+      - name: Run integration tests
+        env:
+          API_URL: https://api.your-domain.com
+        run: |
+          cd tests/integration
+          npm ci
+          npm test
+
+      - name: Run E2E tests
+        env:
+          APP_URL: https://your-domain.com
+        run: |
+          cd tests/e2e
+          npm ci
+          npm test
+
+  # Rollback on failure
+  rollback:
+    name: Rollback on Failure
+    runs-on: ubuntu-latest
+    needs: [integration-tests]
+    if: failure()
+    steps:
+      - name: Rollback ArgoCD Application
+        run: |
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.ARGOCD_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            https://argocd.your-domain.com/api/v1/applications/website-app-prod/rollback \
+            -d '{"revision": "HEAD~1"}'
+
+      - name: Notify team
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: 'Deployment failed and rolled back'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+
+

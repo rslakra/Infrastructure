@@ -1,0 +1,40 @@
+# MongoDB used by k8s-demo-app, which exits at startup when it can't connect to one.
+# Same values as Samples/Node.js/k8s-demo-app/docker-compose.yml (demo credentials, no volume).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongodb
+spec:
+  selector:
+    matchLabels:
+      app: mongodb
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      containers:
+      - name: mongodb
+        image: mongo:7.0
+        ports:
+        - containerPort: 27017
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          value: mongouser
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          value: mongopassword
+        - name: MONGO_INITDB_DATABASE
+          value: NodeApp
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb
+spec:
+  selector:
+    app: mongodb
+  ports:
+  - port: 27017
+    protocol: TCP
+    targetPort: 27017
