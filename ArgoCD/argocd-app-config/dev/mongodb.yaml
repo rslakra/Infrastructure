@@ -1,5 +1,5 @@
 # MongoDB used by k8s-demo-app, which exits at startup when it can't connect to one.
-# Same values as Samples/Node.js/k8s-demo-app/docker-compose.yml (demo credentials, no volume).
+# Same values as Node.js/k8s-demo-app/docker-compose.yml (demo credentials, no volume).
 apiVersion: apps/v1
 kind: Deployment
 metadata:

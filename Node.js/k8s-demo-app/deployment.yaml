@@ -1,0 +1,93 @@
+# Deploys the app built from this folder (Dockerfile + app/) together with its MongoDB.
+#
+# Build the image first (see the Justfile: `just build-container`), which tags it k8s-demo-app:latest,
+# and make it available to the cluster, e.g.:
+#   minikube image load k8s-demo-app:latest
+#   kind load docker-image k8s-demo-app:latest
+# Then: kubectl apply -f deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: k8s-demo-app
+  labels:
+    app: k8s-demo-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: k8s-demo-app
+  template:
+    metadata:
+      labels:
+        app: k8s-demo-app
+    spec:
+      containers:
+        - name: k8s-demo-app
+          # Built from this folder's Dockerfile, not pulled from a registry.
+          image: k8s-demo-app:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: PORT
+              value: "3000"
+            # Same values as docker-compose.yml; the host is the mongodb Service below.
+            - name: MONGO_URL
+              value: mongodb://mongouser:mongopassword@mongodb:27017
+            - name: DB_NAME
+              value: NodeApp
+            - name: LOG_LEVEL
+              value: info
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: k8s-demo-app
+spec:
+  selector:
+    app: k8s-demo-app
+  ports:
+    - port: 3000
+      targetPort: 3000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongodb
+  labels:
+    app: mongodb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      containers:
+        - name: mongodb
+          image: mongo:7.0
+          ports:
+            - containerPort: 27017
+          env:
+            - name: MONGO_INITDB_ROOT_USERNAME
+              value: mongouser
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              value: mongopassword
+            - name: MONGO_INITDB_DATABASE
+              value: NodeApp
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb
+spec:
+  selector:
+    app: mongodb
+  ports:
+    - port: 27017
+      targetPort: 27017

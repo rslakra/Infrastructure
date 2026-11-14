@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: k8s-demo-app
-        # Built and pushed by the k8s-demo-app CI in the Samples repo, which also updates this tag
+        # Built and pushed by the k8s-demo-app CI in this repo (Node.js/k8s-demo-app), which also updates this tag
         # to the commit it built (see this folder's README.md). Keep the "image:" line in this form.
         image: ghcr.io/rslakra/k8s-demo-app:latest
         imagePullPolicy: IfNotPresent

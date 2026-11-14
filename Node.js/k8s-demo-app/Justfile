@@ -1,0 +1,209 @@
+# k8s-demo-app Configs
+APP_NAME:="k8s-demo-app"
+APP_CONTAINER_NAME:="k8s-demo-app"
+APP_HOST_PORT:="3000"
+APP_CONTAINER_PORT:="3000"
+
+
+MONGO_CONTAINER_NAME:="mongodb"
+HOST_PORT:="3000"
+CONTAINER_PORT:="3000"
+
+# MongoDB App Configs
+MONGO_APP_NAME:="mongo-db"
+MONGO_APP_CONTAINER_NAME:="mongo-db"
+MONGO_APP_HOST_PORT:="3000"
+MONGO_APP_CONTAINER_PORT:="3000"
+
+# MongoDB Configs
+MONGO_USERNAME:="mongouser"
+MONGO_PASSWORD:="mongopassword"
+MONGO_DATABASE:="NodeApp"
+MONGO_PORT:="27017"
+MONGO_URL:="mongodb://{{MONGO_USERNAME}}:{{MONGO_PASSWORD}}@{{MONGO_CONTAINER_NAME}}:{{MONGO_PORT}}"
+
+# Docker Configs
+DOCKER_IMAGE_TAG:="latest"
+REGISTRY_IMAGE:="ghcr.io/rslakra/k8s-demo-app"
+
+
+###########################################################
+# Default
+###########################################################
+
+# List all recipes
+default:
+    just --list --unsorted
+
+
+###########################################################
+# Development
+###########################################################
+
+# Install dependencies locally
+install:
+    npm install
+
+# Run app in development mode (requires local MongoDB)
+dev:
+    npm run dev
+
+# Run app in production mode (requires local MongoDB)
+start:
+    npm start
+
+
+###########################################################
+# MongoDB Operations
+###########################################################
+
+# Connect to MongoDB shell
+mongo-shell:
+    docker exec -it {{MONGO_CONTAINER_NAME}} mongosh -u {{MONGO_USERNAME}} -p {{MONGO_PASSWORD}} --authenticationDatabase {{MONGO_DATABASE}}
+
+# Connect to application database
+mongo-app-db:
+    docker exec -it {{MONGO_CONTAINER_NAME}} mongosh -u {{MONGO_USERNAME}} -p {{MONGO_PASSWORD}} --authenticationDatabase {{MONGO_DATABASE}}
+
+# Backup MongoDB database
+mongo-backup:
+    docker exec {{MONGO_CONTAINER_NAME}} mongodump --username {{MONGO_USERNAME}} -p {{MONGO_PASSWORD}} --authenticationDatabase {{MONGO_DATABASE}} --db {{MONGO_DATABASE}} --out /data/backup
+    docker cp {{MONGO_CONTAINER_NAME}}:/data/backup ./backup
+    @echo "Database backed up to ./backup directory"
+
+# Show MongoDB stats
+mongo-stats:
+    docker exec {{MONGO_CONTAINER_NAME}} mongosh -u {{MONGO_USERNAME}} -p {{MONGO_PASSWORD}} --authenticationDatabase {{MONGO_DATABASE}} --eval "db.stats()"
+
+
+###########################################################
+# k8s-demo-app: Build and Run Standalone Image
+###########################################################
+
+# Build k8s-demo-app Docker Image
+build-container:
+    docker build -f Dockerfile -t {{APP_NAME}}:{{DOCKER_IMAGE_TAG}} .
+
+# Push the image to GitHub Container Registry by hand (CI does this on every push to master).
+# Needs: docker login ghcr.io -u <user> with a token that has the write:packages scope.
+push-container:
+    docker tag {{APP_NAME}}:{{DOCKER_IMAGE_TAG}} {{REGISTRY_IMAGE}}:{{DOCKER_IMAGE_TAG}}
+    docker push {{REGISTRY_IMAGE}}:{{DOCKER_IMAGE_TAG}}
+
+# Run k8s-demo-app Docker Container (standalone, no MongoDB)
+run-container:
+    docker run --rm \
+        --name {{APP_CONTAINER_NAME}} \
+        -p {{HOST_PORT}}:{{CONTAINER_PORT}} \
+        -e MONGO_URL=mongodb://host.docker.internal:{{MONGO_PORT}} \
+        -d {{APP_NAME}}:{{DOCKER_IMAGE_TAG}}
+
+# Shows k8s-demo-app Docker Container Logs
+log-container:
+    docker logs -f {{APP_CONTAINER_NAME}}
+
+# Execute shell in k8s-demo-app container
+shell-container:
+    docker exec -it {{APP_CONTAINER_NAME}} /bin/sh
+
+# Stops k8s-demo-app Docker Container
+stop-container:
+    docker stop {{APP_CONTAINER_NAME}}
+
+# Remove k8s-demo-app Docker Container
+rm-container:
+    docker container rm {{APP_CONTAINER_NAME}}
+
+
+###########################################################
+# Docker Compose - Full Stack (Recommended)
+###########################################################
+
+# Build and start all services (Node.js + MongoDB)
+start-apps:
+    docker-compose up --build
+
+# Start all services in background
+start-apps-detached:
+    docker-compose up -d --build
+
+# Stop all services
+stop-apps:
+    docker-compose down
+
+# Stop all services and remove volumes
+clean-volumes:
+    docker-compose down -v
+
+# View logs from all services
+log-apps:
+    docker-compose logs -f
+
+# View logs from k8s-demo-app only
+log-k8s-demo-app:
+    docker-compose logs -f {{APP_CONTAINER_NAME}}
+
+# View logs from mongodb only
+log-mongodb:
+    docker-compose logs -f {{MONGO_APP_CONTAINER_NAME}}
+
+# Restart all services
+restart-apps:
+    docker-compose restart
+
+# Show status of all services
+status:
+    docker-compose ps
+
+
+# Clean all containers and images
+clean-all:
+    docker-compose down -v
+    docker rmi {{APP_NAME}}:{{DOCKER_IMAGE_TAG}} || true
+    docker rmi {{MONGO_APP_NAME}}:{{DOCKER_IMAGE_TAG}} || true
+    docker rmi {{APP_CONTAINER_NAME}} || true
+    docker rmi {{MONGO_CONTAINER_NAME}} || true
+    @echo "Cleanup complete"
+
+# Remove all unused Docker resources
+prune:
+    docker system prune -f
+    docker volume prune -f
+
+
+
+###########################################################
+# API Testing
+###########################################################
+
+# Get API version
+api-version:
+    curl http://localhost:{{HOST_PORT}}/json/version
+
+# Health check
+api-health:
+    curl http://localhost:{{HOST_PORT}}/health
+
+# Get all tasks
+api-get-tasks:
+    curl http://localhost:{{HOST_PORT}}/api/tasks
+
+# Create a sample task
+api-create-task:
+    curl -X POST http://localhost:{{HOST_PORT}}/api/tasks \
+        -H "Content-Type: application/json" \
+        -d '{"title":"Sample Task","description":"This is a test task","status":"pending"}'
+
+# Update a task (requires task ID as argument)
+api-update-task ID:
+    curl -X PUT http://localhost:{{HOST_PORT}}/api/tasks/{{ID}} \
+        -H "Content-Type: application/json" \
+        -d '{"status":"completed"}'
+
+# Delete a task (requires task ID as argument)
+api-delete-task ID:
+    curl -X DELETE http://localhost:{{HOST_PORT}}/api/tasks/{{ID}}
+
+
+
+
