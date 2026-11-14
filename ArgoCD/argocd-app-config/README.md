@@ -48,9 +48,9 @@ How a change reaches the cluster:
 
 One-time setup:
 
-* No token or secret is needed: the workflow uses the built-in `GITHUB_TOKEN`.
-  If the repo's Actions settings are read-only, set **Settings > Actions > General > Workflow permissions** to allow write
-  (the workflow already requests `packages: write` and `contents: write` per job).
+* No token or secret is needed: the workflow uses the built-in `GITHUB_TOKEN`. Each job declares the permissions it needs
+  (`packages: write` to push the image, `contents: write` to commit the new tag), so the repo's default
+  **Workflow permissions** setting doesn't matter, unless an organization policy caps them.
 * After the first push, make the `k8s-demo-app` package public (GitHub profile > Packages > Package settings),
   or create an image pull secret in the `k8s-demo-app` namespace and reference it from `dev/deployment.yaml`.
 * If the `k8s-demo-app` package was already pushed from the Samples repo, it is linked to that repo: open the package settings >
