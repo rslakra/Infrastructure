@@ -11,7 +11,7 @@
   "author": "Rohtash Lakra",
   "license": "ISC",
   "dependencies": {
-    "express": "^4.18.2",
+    "express": "^4.22.3",
     "mongodb": "^5.9.0",
     "pino": "^8.16.0",
     "pino-pretty": "^10.2.3",
