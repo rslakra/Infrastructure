@@ -40,7 +40,7 @@ kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.pas
 How a change reaches the cluster:
 
 1. A push to `master` in the Samples repo that touches `Node.js/k8s-demo-app/` runs
-   `.github/workflows/k8s-demo-app-ci.yml`, which builds the image and pushes it as `:<commit sha>` and `:latest`.
+   `.github/workflows/nodejs-k8s-demo-app-ci.yml`, which builds the image and pushes it as `:<commit sha>` and `:latest`.
 2. The same workflow commits the new `:<commit sha>` tag to `dev/deployment.yaml` in this repo.
 3. ArgoCD sees the commit and rolls the deployment out (automated sync).
 
