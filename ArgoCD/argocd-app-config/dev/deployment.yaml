@@ -16,7 +16,7 @@ spec:
       - name: k8s-demo-app
         # Built and pushed by the k8s-demo-app CI in this repo (Node.js/k8s-demo-app), which also updates this tag
         # to the commit it built (see this folder's README.md). Keep the "image:" line in this form.
-        image: ghcr.io/rslakra/k8s-demo-app:latest
+        image: ghcr.io/rslakra/k8s-demo-app:b625c2ee18c7c926565b2874355519cd250a0d70
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3000
