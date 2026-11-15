@@ -1,0 +1,25 @@
+init_config:
+  service: "EXAMPLE_GUNICORN_APP"
+
+instances:
+  ## @param proc_name - string - required
+  ## The name of the gunicorn process. For the following gunicorn server:
+  ##
+  ## gunicorn --name <WEB_APP_NAME> <WEB_APP_CONFIG>.ini
+  ##
+  ## the name is `<WEB_APP_NAME>`
+  - proc_name: gunicorn
+
+logs:
+  - type: file
+    path: /var/log/gunicorn/access.log
+    source: gunicorn
+  
+  - type: file
+    path: /var/log/gunicorn/error.log
+    source: gunicorn
+    log_processing_rules:
+      - type: multi_line
+        name: log_start_with_date
+        pattern: \[\d{4}-\d{2}-\d{2}
+      
